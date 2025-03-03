@@ -2,6 +2,32 @@
 
 This example is a chatbot you use through the Command Line Interface (CLI). It's inspired by the [spring-ai-cli-chatbot](https://github.com/tzolov/spring-ai-cli-chatbot) project, but unlike the original, it focuses on full local execution and offers AI-driven conversations without requiring external AI services.
 
+## Demo
+```
+spring-ai-local-cli-chatbot
+
+USER: Tell me about Hurricane Milton.
+
+[ Search Results ]
+===============================================
+▶ 1 Document, Score: 0.74
+-----------------------------------------------
+Tropical Depression Fourteen Discussion Number 1 (https://
+www.nhc.noaa.gov/archive/2024/al14/al142024.discus.001.shtml?) (Report). Miami, Florida:
+National Hurricane Center. Archived (https://web.archive.org/web/20241005151826/https://ww
+w.nhc.noaa.gov/archive/2024/al14/al142024.discus.001.shtml) from the original on October 5,
+2024. Retrieved October 5, 2024.
+
+===============================================
+▶ 2 Document, Score: 0.74
+-----------------------------------------------
+Brown, Daniel; Blake, Eric (October 7, 2024). Hurricane Milton Update Statement (https://www.nhc.noaa.gov
+...
+===============================================
+
+ASSISTANT: Hurricane Milton was a powerful Category 5 storm that formed in the Atlantic in 2023. It caused significant damage along the Gulf Coast, particularly in Florida, where it made landfall near Tampa. The storm surge and high winds led to widespread flooding and power outages. Emergency services were overwhelmed, and recovery efforts took several weeks.
+```
+
 ## Quick Start
 
 Build and run the app:
@@ -11,6 +37,26 @@ Build and run the app:
 ```
 
 ## Auto-configurations
+
+### Configuration Options
+The following options have been added to application.properties:
+```
+# Sets the name of the Spring Boot application.
+spring.application.name=spring-ai-local-cli-chatbot
+# Specifies the location pattern for RAG (Retrieval-Augmented Generation) documents to be embedded.
+spring.application.cli-chatbot.documents-location-pattern=classpath:wikipedia-hurricane-milton-page.pdf
+```
+#### RAG Document Path Pattern
+The project uses PathMatchingResourcePatternResolver to generate the path pattern for RAG documents. This Spring utility allows flexible specification of document locations, enabling the application to dynamically load and embed documents for RAG-based conversations. The patterns can target resources in the classpath or the file system.
+
+#### Pattern Examples
+- Classpath Patterns:
+classpath:wikipedia-hurricane-milton-page.pdf: Loads a specific PDF file from the classpath.
+classpath*:*.pdf: Loads all PDF files from the classpath.
+- File System Patterns:
+file:/path/to/docs/*.pdf: Loads all PDF files from the specified directory on the file system.
+
+These patterns provide flexibility in defining which documents are used for embedding and retrieval, making the chatbot adaptable to various document sources.
 
 ### AI Model
 
@@ -76,4 +122,5 @@ Creates an interactive loop for chatbot interaction, **streaming the assistant�
 2. **Ollama Integration**: Uses Ollama for both LLM and embedding models, offering high-performance local AI processing.
 3. **Spring AI's SimpleVectorStore**: Implements a lightweight vector store for efficient information retrieval without external dependencies.
 4. **Interactive Console Interface**: Provides a streamlined console-based interface for real-time chatbot interaction.
+5. **Dynamic RAG Document Loading**: Uses PathMatchingResourcePatternResolver for flexible document retrieval.
 
