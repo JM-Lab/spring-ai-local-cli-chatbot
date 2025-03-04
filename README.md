@@ -1,6 +1,6 @@
-# Spring AI Powered Local CLI Chat Bot
+# Spring AI Powered Local CLI Chat Bot with RAG
 
-This example is a chatbot you use through the Command Line Interface (CLI). It's inspired by the [spring-ai-cli-chatbot](https://github.com/tzolov/spring-ai-cli-chatbot) project, but unlike the original, it focuses on full local execution and offers AI-driven conversations without requiring external AI services.
+This project is a fully local AI chatbot built with Spring AI and RAG (Retrieval-Augmented Generation). It runs in a CLI (Command Line Interface) environment, ensuring privacy and offline functionality without external dependencies. By default, it uses Ollama for both LLM and embedding models, but it also supports other Spring AI-compatible providers. The chatbot processes various document types, including PDF, DOCX, TXT, and HTML, extracting and vectorizing text for domain-specific Q&A.
 
 ## Demo
 ```
