@@ -64,8 +64,8 @@ Spring AI works with **Ollama** for local LLM and embedding models. No API keys 
 To enable this, simply add the following dependency:
 ```xml
 <dependency>
-   <groupId>org.springframework.ai</groupId>
-   <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
+  <groupId>org.springframework.ai</groupId>
+  <artifactId>spring-ai-starter-model-ollama</artifactId>
 </dependency>
 ```
 > **Before using Ollama with Spring AI**, ensure that Ollama is installed and running on your system, refer to the [Spring AI Ollama Chat Prerequisites](https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html#_prerequisites).
@@ -84,37 +84,85 @@ To use different models for local LLM and embedding in your Spring Boot applicat
     - [LLM Models](https://github.com/ollama/ollama?tab=readme-ov-file#model-library)
     - [Embedding Models](https://ollama.com/search?c=embedding)
 
+## Implementation Details
+### Default System Prompt
+A default system prompt can be configured via application.properties to define the assistant’s behavior and expertise.
+In this case, the assistant is specialized in hurricanes:
+```properties
+spring.application.cli-chatbot.system-prompt=You are useful assistant, expert in hurricanes.
+```
 ### Vector Store
+The project uses Spring AI’s SimpleVectorStore, eliminating the need for external vector databases.
+This store is automatically configured unless a custom VectorStore bean is provided.
 ```java
 @Bean
-public VectorStore vectorStore(EmbeddingModel embeddingModel){
-    return new SimpleVectorStore(embeddingModel);
+@ConditionalOnMissingBean(VectorStore.class)
+public VectorStore vectorStore(EmbeddingModel embeddingModel) {
+  return SimpleVectorStore.builder(embeddingModel).build();
 }
 ```
-The project uses Spring AI's SimpleVectorStore, eliminating the need for external vector databases.
-
-### PDF Document Processing
-
-PDF document reading capability is enabled through the `spring-ai-pdf-document-reader` dependency.
-
-## Implementation Details
-### Vector Store Loading
-```java
-vectorStore.add(new TokenTextSplitter().split(new PagePdfDocumentReader(localDocs).read()));
+### Document Readers
+Documents are read using Apache Tika-based TikaDocumentReader, which supports multiple file formats.
+The documents are loaded from the locations specified in your application.properties:
+```properties
+spring.application.cli-chatbot.documents-location-pattern=classpath:wikipedia-hurricane-milton-page.pdf
 ```
+```java
+@Bean
+@ConditionalOnMissingBean(DocumentReader.class)
+public DocumentReader[] documentReaders(
+        @Value("${spring.application.cli-chatbot.documents-location-pattern}") String documentsLocationPattern) throws IOException {
+  return Arrays.stream(new PathMatchingResourcePatternResolver().getResources(documentsLocationPattern))
+          .map(TikaDocumentReader::new).toArray(DocumentReader[]::new);
+}
+```
+### Text Splitter
+Text data is split into token-based chunks using TokenTextSplitter, which is useful for chunking documents before embedding.
+```java
+@Bean
+@ConditionalOnMissingBean(TextSplitter.class)
+public TextSplitter textSplitter() {
+  return new TokenTextSplitter();
+}
+```
+### Retrieval-Augmented Generation (RAG)
+The RetrievalAugmentationAdvisor uses a VectorStoreDocumentRetriever to retrieve similar documents based on vector similarity.
+A similarity threshold of 0.50 is used to filter relevant context.
+```java
+@Bean
+@ConditionalOnMissingBean(RetrievalAugmentationAdvisor.class)
+public RetrievalAugmentationAdvisor retrievalAugmentationAdvisor(VectorStore vectorStore) {
+  return RetrievalAugmentationAdvisor.builder()
+          .documentRetriever(
+                  VectorStoreDocumentRetriever.builder()
+                          .similarityThreshold(0.50)
+                          .vectorStore(vectorStore)
+                          .build()
+          )
+          .build();
+}
+```
+
 ### Chat Loop
 ```java
+AtomicBoolean isFirst = new AtomicBoolean(true);
 try (Scanner scanner = new Scanner(System.in)) {
     while (true) {
         System.out.print("\nUSER: ");
         String userMessage = scanner.nextLine();
-        System.out.print("\nASSISTANT: ");
-        chatClient.prompt(userMessage).stream().content().toStream().forEach(System.out::print);
+        chatClient.prompt(userMessage).stream().content().toStream().forEach(s -> {
+            if (isFirst.get()) {
+                isFirst.set(false);
+                System.out.print("\nASSISTANT: ");
+            }
+            System.out.print(s);
+        });
         System.out.println();
+        isFirst.set(true);
     }
 }
 ```
-Creates an interactive loop for chatbot interaction, **streaming the assistant’s response in real-time**.
+Creates an interactive loop for RAG chatbot interaction, **streaming the assistant’s response in real-time**.
 
 ## Key Features
 
